@@ -1,0 +1,7 @@
+{
+    "apps": [{
+     "name": "mimir-api",
+     "script": "dist/src/main.js",
+     "watch": false
+   }]
+}
