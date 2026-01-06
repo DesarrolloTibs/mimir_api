@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 
 
-import { UpdateUserDto, UpdateUserStatusDto } from './dto/update-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { Role } from 'role.enum';
 
 @Injectable()
@@ -21,10 +21,9 @@ export class UsersService implements OnModuleInit {
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash('Admin2026!', 10);
       await this.userRepository.save({
-        username: 'Ivonne Cabriales',
+        fullName: 'Ivonne Cabriales',
         password: hashedPassword,
         email: 'ivonne.cabriales@tibs.com.mx',
-        isActive: true,
         role: Role.Admin,
       });
     }
@@ -45,8 +44,10 @@ export class UsersService implements OnModuleInit {
 
   async create(userData: CreateUserDto): Promise<User> {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
-    const user = this.userRepository.create(userData);
-    user.password = hashedPassword;
+    const user = this.userRepository.create({
+      ...userData,
+      password: hashedPassword,
+    });
     return this.userRepository.save(user);
   }
 
@@ -62,31 +63,7 @@ export class UsersService implements OnModuleInit {
     return this.findOneById(id);
   }
 
-  async updateStatus(id: string, updateUserStatusDto: UpdateUserStatusDto): Promise<User> {
-    const user = await this.findOneById(id);
-    user.isActive = updateUserStatusDto.isActive;
-    return this.userRepository.save(user);
-  }
-
   async findAll(): Promise<User[]> {
     return this.userRepository.find();
-  }
-
-  async findAllActive(): Promise<User[]> {
-    return this.userRepository.find({ where: { isActive: true } });
-  }
-
-  /**
-   * Actualiza la URL de la imagen de perfil de un usuario.
-   * También elimina la imagen anterior del sistema de archivos si existe.
-   * @param userId - El ID del usuario a actualizar.
-   * @param imageUrl - La nueva URL de la imagen de perfil.
-   * @returns La entidad del usuario actualizada.
-   */
-  async updateProfileImage(userId: string, imageUrl: string): Promise<User> {
-    // Reutilizamos findOneById que ya maneja el caso de usuario no encontrado.
-    const user = await this.findOneById(userId);
-    user.profileImageUrl = imageUrl;
-    return this.userRepository.save(user);
   }
 }

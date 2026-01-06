@@ -3,33 +3,28 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 
 import { Exclude } from 'class-transformer';
-import { Role } from 'role.enum';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
-  username: string;
-
-  @Column({ unique: true })
+  @Column({ type: 'varchar', length: 150, unique: true, nullable: true })
   email: string;
 
+  @Column({ name: 'full_name', type: 'varchar', length: 150, nullable: true })
+  fullName: string;
+
   @Column()
-  @Exclude() // Excluir la contraseña de las respuestas JSON
+  @Exclude()
   password: string;
 
-  @Column({ type: 'enum', enum: Role, default: Role.Executive })
-  role: Role;
+  @Column({ type: 'varchar', length: 50, default: 'Developer' })
+  role: string;
 
-  @Column({ default: true })
-  isActive: boolean;
-
-  @Column({ type: 'varchar', nullable: true })
-  profileImageUrl: string | null;
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
 }

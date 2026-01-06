@@ -5,6 +5,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { ProjectsModule } from './projects/projects.module';
+import { DocumentsModule } from './documents/documents.module';
+import { EstimationsModule } from './estimations/estimations.module';
+import { ChatModule } from './chat/chat.module';
 
 
 @Module({
@@ -29,6 +33,10 @@ import { UsersModule } from './users/users.module';
     }),
     AuthModule,
     UsersModule,
+    ProjectsModule,
+    DocumentsModule,
+    EstimationsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
