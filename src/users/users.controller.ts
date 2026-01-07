@@ -1,7 +1,10 @@
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   NotFoundException,
   Param,
   Patch,
@@ -57,5 +60,19 @@ export class UsersController {
   @ApiBody({ type: UpdateUserDto })
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto): Promise<User> {
     return this.usersService.update(id, updateUserDto);
+  }
+
+  @Patch(':id/status')
+  @ApiOkResponse({ description: 'Estado del usuario actualizado exitosamente.', type: User })
+  @ApiBody({ type: UpdateUserStatusDto })
+  updateStatus(@Param('id') id: string, @Body() updateUserStatusDto: UpdateUserStatusDto): Promise<User> {
+    return this.usersService.updateStatus(id, updateUserStatusDto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiOkResponse({ description: 'Usuario eliminado exitosamente.' })
+  delete(@Param('id') id: string): Promise<void> {
+    return this.usersService.delete(id);
   }
 }
