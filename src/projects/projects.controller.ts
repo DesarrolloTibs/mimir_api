@@ -40,6 +40,16 @@ export class ProjectsController {
     return this.projectsService.create(createProjectDto);
   }
 
+  @Get()
+  @ApiOperation({ summary: 'Get all projects' })
+  @ApiResponse({
+    status: 200,
+    description: 'A list of all projects.',
+  })
+  findAll() {
+    return this.projectsService.findAll();
+  }
+
   @Post(':id/documents/upload')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Upload a document to a project' })

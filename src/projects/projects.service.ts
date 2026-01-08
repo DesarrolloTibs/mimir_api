@@ -28,15 +28,18 @@ export class ProjectsService {
     return project;
   }
 
+  async findAll(): Promise<Project[]> {
+    return this.projectRepository.find();
+  }
+
   async uploadDocument(projectId: string, file: Express.Multer.File) {
     const project = await this.projectRepository.findOneBy({ id: projectId });
     if (!project) {
       throw new NotFoundException(`Project with ID "${projectId}" not found`);
     }
 
-    // Ensure the uploads directory exists. NOTE: This will not create it at runtime in this environment.
-    const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
-    // await fs.mkdir(uploadsDir, { recursive: true }); // This line would normally ensure the dir exists.
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    await fs.mkdir(uploadsDir, { recursive: true });
 
     const filePath = path.join(uploadsDir, `${Date.now()}-${file.originalname}`);
     await fs.writeFile(filePath, file.buffer);
