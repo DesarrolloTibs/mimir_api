@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { Requirement } from './entities/requirement.entity';
 import { EstimationItem } from './entities/estimation-item.entity';
 import { GenerateEstimationDto } from './dto/generate-estimation.dto';
+import { EstimationResponseDto } from './dto/estimation-response.dto';
+import { DocumentChunk } from '../documents/entities/document-chunk.entity';
+import { GeminiService } from '../common/gemini.service';
 
 @Injectable()
 export class EstimationsService {
@@ -12,55 +15,69 @@ export class EstimationsService {
     private readonly requirementRepository: Repository<Requirement>,
     @InjectRepository(EstimationItem)
     private readonly estimationItemRepository: Repository<EstimationItem>,
+    @InjectRepository(DocumentChunk)
+    private readonly documentChunkRepository: Repository<DocumentChunk>,
+    private readonly geminiService: GeminiService,
   ) {}
 
-  async generate(generateEstimationDto: GenerateEstimationDto) {
-    const { projectId, requirement: requirementText } = generateEstimationDto;
+  async generate(
+    generateEstimationDto: GenerateEstimationDto,
+  ): Promise<EstimationResponseDto> {
+    const { projectId, documentId, requirementText } = generateEstimationDto;
 
-    // 1. Save the requirement
+    // 1. Fetch document chunks
+    const chunks = await this.documentChunkRepository.find({
+      where: { document: { id: documentId } },
+      order: { chunkIndex: 'ASC' },
+    });
+
+    if (!chunks || chunks.length === 0) {
+      throw new Error('No document chunks found for the given documentId.');
+    }
+
+    const documentContent = chunks.map((chunk) => chunk.content).join('\n\n');
+
+    // 2. Save the requirement
     const newRequirement = this.requirementRepository.create({
       projectId,
-      originalText: requirementText,
-      title: requirementText.substring(0, 50) + '...', // Simple title
+      originalText: documentContent, // Store the full document content
+      title:
+        (requirementText?.substring(0, 47) ??
+          documentContent.substring(0, 47)) + '...', // Use user's text for title, fallback to content
       status: 'Estimated',
     });
     await this.requirementRepository.save(newRequirement);
 
-    // 2. Mock the AI response
-    const mockAiResponse = {
-      summary: 'Implementación de Auth0 con Guardias en NestJS',
-      tasks: [
-        {
-          description: 'Configurar Estrategia Google OAuth en NestJS',
-          layer: 'Backend',
-          hours: 4,
-          reason: 'Documento de arquitectura pág 5 especifica PassportJS',
-        },
-        {
-          description: 'Botón de Login y Redirección en React',
-          layer: 'Frontend',
-          hours: 3,
-          reason: 'Componente estándar reutilizable',
-        },
-      ],
-      totalHours: 7,
-      confidenceScore: 85,
-    };
+    // 3. Generate estimation using Gemini
+    const aiResponse = await this.geminiService.generateEstimation(
+      requirementText ?? '',
+      chunks,
+    );
 
-    // 3. Save the estimation items
-    const estimationItems = mockAiResponse.tasks.map((task) =>
+    // 4. Save the estimation items
+    const estimationItems = aiResponse.tasks.map((task) =>
       this.estimationItemRepository.create({
         requirementId: newRequirement.id,
         taskDescription: task.description,
         layer: task.layer,
         aiSuggestedHours: task.hours,
         aiReasoning: task.reason,
-        aiConfidenceScore: mockAiResponse.confidenceScore, // Applying overall confidence to each task
+        aiConfidenceScore: aiResponse.confidenceScore, // Applying overall confidence to each task
       }),
     );
     await this.estimationItemRepository.save(estimationItems);
 
-    // 4. Return the mocked response
-    return mockAiResponse;
+    // 5. Return the AI-generated response
+    return {
+      summary: aiResponse.summary,
+      tasks: aiResponse.tasks.map((task) => ({
+        description: task.description,
+        layer: task.layer,
+        hours: task.hours,
+        reason: task.reason,
+      })),
+      totalHours: aiResponse.totalHours,
+      confidenceScore: aiResponse.confidenceScore,
+    };
   }
 }

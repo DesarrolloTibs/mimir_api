@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Document } from './entities/document.entity';
 import { DocumentStatus } from './entities/document-status.enum';
 import { DocumentChunk } from './entities/document-chunk.entity';
@@ -51,6 +51,19 @@ export class DocumentsService {
 
   async findAllByProjectId(projectId: string): Promise<Document[]> {
     return this.documentRepository.find({ where: { projectId } });
+  }
+
+  async getProjectChunks(projectId: string): Promise<DocumentChunk[]> {
+    const documents = await this.documentRepository.find({
+      where: { projectId, processingStatus: DocumentStatus.READY },
+    });
+    if (documents.length === 0) {
+      return [];
+    }
+    const documentIds = documents.map((doc) => doc.id);
+    return this.documentChunkRepository.find({
+      where: { document: { id: In(documentIds) } },
+    });
   }
 
   async processDocument(documentId: string): Promise<void> {
@@ -173,3 +186,4 @@ export class DocumentsService {
     });
   }
 }
+

@@ -11,10 +11,18 @@ export class GenerateEstimationDto {
   projectId: string;
 
   @ApiProperty({
-    description: 'The requirement text in natural language',
-    example: 'I need a login with Google',
+    description: 'The ID of the document to be used for the estimation',
+    example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  documentId: string;
+
+  @ApiProperty({
+    description: 'Additional text to complement the document for the estimation',
+    example: 'Please focus on the backend tasks.',
+    required: false,
   })
   @IsString()
-  @IsNotEmpty()
-  requirement: string;
+  requirementText?: string;
 }

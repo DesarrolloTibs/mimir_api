@@ -1,18 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import {
+  NestExpressApplication,
+  ExpressAdapter,
+} from '@nestjs/platform-express';
 import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(
+    AppModule,
+    new ExpressAdapter(),
+  );
 
   // Servir archivos estáticos desde la carpeta 'uploads'
   // IMPORTANTE: Esto debe ir ANTES de setGlobalPrefix
-/*  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
-*/
   // Establece un prefijo global para la API.
   app.setGlobalPrefix('api');
 

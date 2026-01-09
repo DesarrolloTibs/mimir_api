@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { ChatSession } from './entities/chat-session.entity';
 import { ChatMessage, ChatMessageRole } from './entities/chat-message.entity';
 import { PostMessageDto } from './dto/post-message.dto';
+import { GeminiService } from 'src/common/gemini.service';
+import { DocumentsService } from 'src/documents/documents.service';
 
 @Injectable()
 export class ChatService {
@@ -12,6 +14,8 @@ export class ChatService {
     private readonly chatSessionRepository: Repository<ChatSession>,
     @InjectRepository(ChatMessage)
     private readonly chatMessageRepository: Repository<ChatMessage>,
+    private readonly geminiService: GeminiService,
+    private readonly documentsService: DocumentsService,
   ) {}
 
   async postMessage(postMessageDto: PostMessageDto) {
@@ -20,9 +24,12 @@ export class ChatService {
     let session: ChatSession | null = null;
 
     if (sessionId) {
-      session = await this.chatSessionRepository.findOneBy({ id: sessionId, projectId });
+      session = await this.chatSessionRepository.findOneBy({
+        id: sessionId,
+        projectId,
+      });
     }
-    
+
     if (!session) {
       session = this.chatSessionRepository.create({
         projectId,
@@ -39,26 +46,26 @@ export class ChatService {
     });
     await this.chatMessageRepository.save(userMessage);
 
-    // 2. Mock AI response
-    const mockAiResponse = {
-      answer: 'El campo RFC es varchar(13) y requiere validación regex.',
-      citations: [
-        { docName: 'DiccionarioDatos.pdf', page: 12, similarity: 0.89 },
-      ],
-    };
+    // 2. Get document chunks
+    const chunks = await this.documentsService.getProjectChunks(projectId);
 
-    // 3. Save assistant message
+    // 3. Generate AI response
+    const aiResponse = await this.geminiService.generateChatResponse(
+      message,
+      chunks,
+    );
+
+    // 4. Save assistant message
     const assistantMessage = this.chatMessageRepository.create({
       sessionId: session.id,
       role: ChatMessageRole.ASSISTANT,
-      content: mockAiResponse.answer,
-      // In a real implementation, you would also save citation data
+      content: aiResponse,
     });
     await this.chatMessageRepository.save(assistantMessage);
 
-    // 4. Return response
+    // 5. Return response
     return {
-      ...mockAiResponse,
+      answer: aiResponse,
       sessionId: session.id,
     };
   }

@@ -2,6 +2,7 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { EstimationsService } from './estimations.service';
 import { GenerateEstimationDto } from './dto/generate-estimation.dto';
+import { EstimationResponseDto } from './dto/estimation-response.dto';
 
 @ApiTags('Estimations')
 @Controller('estimations')
@@ -13,9 +14,12 @@ export class EstimationsController {
   @ApiResponse({
     status: 201,
     description: 'The estimation has been successfully generated.',
+    type: EstimationResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
-  generate(@Body() generateEstimationDto: GenerateEstimationDto) {
+  generate(
+    @Body() generateEstimationDto: GenerateEstimationDto,
+  ): Promise<EstimationResponseDto> {
     return this.estimationsService.generate(generateEstimationDto);
   }
 }
