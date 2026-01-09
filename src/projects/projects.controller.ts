@@ -99,8 +99,8 @@ export class ProjectsController {
     );
     return documents.map((doc) => ({
       id: doc.id,
-      filename: doc.filename,
-      status: doc.processingStatus,
+      fileName: doc.filename,
+      fileStatus: doc.processingStatus,
     }));
   }
 }

@@ -5,9 +5,13 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
 import { User } from '../../users/entities/user.entity';
+
+import { DocumentStatus } from './document-status.enum';
+import { DocumentChunk } from './document-chunk.entity';
 
 @Entity('documents')
 export class Document {
@@ -30,11 +34,16 @@ export class Document {
   @Column({ name: 'file_type', type: 'varchar', length: 50 })
   fileType: string;
 
-  @Column({ name: 'processing_status', type: 'varchar', length: 20, default: 'Pending' })
-  processingStatus: string;
+  @Column({
+    type: 'enum',
+    enum: DocumentStatus,
+    default: DocumentStatus.PENDING,
+    name: 'processing_status',
+  })
+  processingStatus: DocumentStatus;
 
   @Column({ name: 'error_message', type: 'text', nullable: true })
-  errorMessage: string;
+  errorMessage: string | null;
 
   @CreateDateColumn({ name: 'uploaded_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   uploadedAt: Date;
@@ -45,4 +54,7 @@ export class Document {
 
   @Column({ type: 'uuid', name: 'uploaded_by', nullable: true })
   uploadedById: string;
+
+  @OneToMany(() => DocumentChunk, (chunk) => chunk.document)
+  chunks: DocumentChunk[];
 }

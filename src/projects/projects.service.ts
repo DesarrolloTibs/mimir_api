@@ -38,13 +38,21 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID "${projectId}" not found`);
     }
 
+    // Fix for filename encoding issues from multer
+    const originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    file.originalname = originalname;
+
     const uploadsDir = path.join(process.cwd(), 'uploads');
     await fs.mkdir(uploadsDir, { recursive: true });
 
     const filePath = path.join(uploadsDir, `${Date.now()}-${file.originalname}`);
     await fs.writeFile(filePath, file.buffer);
 
-    const document = await this.documentsService.create(projectId, file, filePath);
+    const document = await this.documentsService.create(
+      projectId,
+      file,
+      filePath,
+    );
 
     return {
       documentId: document.id,
