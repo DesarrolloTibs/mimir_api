@@ -3,7 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  ManyToOne,
+  OneToOne,
   JoinColumn,
   OneToMany,
 } from 'typeorm';
@@ -15,7 +15,7 @@ export class Requirement {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Project, { onDelete: 'CASCADE' })
+  @OneToOne(() => Project, (project) => project.requirement, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'project_id' })
   project: Project;
 

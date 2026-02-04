@@ -6,8 +6,10 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Requirement } from '../../estimations/entities/requirement.entity';
 
 @Entity('projects')
 export class Project {
@@ -39,6 +41,9 @@ export class Project {
   @JoinColumn({ name: 'created_by' })
   createdBy: User;
 
-  @Column({ type: 'uuid', name: 'created_by', nullable: true })
+  @Column({ type: 'uuid', name: 'created_by', nullable: true, insert: false, update: false })
   createdById: string;
+
+  @OneToOne(() => Requirement, (requirement) => requirement.project)
+  requirement: Requirement;
 }

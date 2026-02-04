@@ -18,6 +18,7 @@ interface GeminiEstimation {
 export class GeminiService {
   private geminiApi: GoogleGenerativeAI;
   private model: GenerativeModel;
+  private language: string;
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
@@ -30,6 +31,7 @@ export class GeminiService {
     this.model = this.geminiApi.getGenerativeModel({
       model: 'gemini-2.5-flash',
     });
+    this.language = this.configService.get<string>('GEMINI_LANGUAGE', 'es');
   }
 
   public async generateText(prompt: string): Promise<string> {
@@ -86,6 +88,8 @@ export class GeminiService {
 
       Context Documents:
       ${contextChunks}
+
+      Provide the values for "summary", "description", and "reason" in ${this.language === 'es' ? 'Spanish' : 'English'}.
     `;
 
     const response = await this.generateText(prompt);
@@ -139,6 +143,7 @@ export class GeminiService {
     const prompt = `
       Answer the following question based on the provided context documents.
       If the answer is not in the context, say that you cannot answer.
+      Provide the answer in ${this.language === 'es' ? 'Spanish' : 'English'}.
 
       Question:
       ${question}

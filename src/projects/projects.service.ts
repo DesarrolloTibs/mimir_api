@@ -29,7 +29,9 @@ export class ProjectsService {
   }
 
   async findAll(): Promise<Project[]> {
-    return this.projectRepository.find();
+    return this.projectRepository.find({
+      relations: ['requirement'],
+    });
   }
 
   async uploadDocument(projectId: string, file: Express.Multer.File) {
