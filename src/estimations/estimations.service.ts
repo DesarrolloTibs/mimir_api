@@ -37,6 +37,15 @@ export class EstimationsService {
 
     const documentContent = chunks.map((chunk) => chunk.content).join('\n\n');
 
+    // Check if a requirement already exists for this project and delete it
+    const existingRequirement = await this.requirementRepository.findOne({
+      where: { projectId },
+    });
+
+    if (existingRequirement) {
+      await this.requirementRepository.remove(existingRequirement);
+    }
+
     // 2. Save the requirement
     const newRequirement = this.requirementRepository.create({
       projectId,
@@ -79,5 +88,12 @@ export class EstimationsService {
       totalHours: aiResponse.totalHours,
       confidenceScore: aiResponse.confidenceScore,
     };
+  }
+
+  async findAllByRequirementId(requirementId: string): Promise<EstimationItem[]> {
+    return this.estimationItemRepository.find({
+      where: { requirementId },
+      order: { createdAt: 'ASC' },
+    });
   }
 }
