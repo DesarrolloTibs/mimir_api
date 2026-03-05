@@ -55,6 +55,21 @@ export class GeminiService {
       throw new Error('Failed to generate content from Gemini.');
     }
   }
+
+  public async generateEmbedding(text: string): Promise<number[]> {
+    try {
+      const embeddingModel = this.geminiApi.getGenerativeModel({
+        model: 'gemini-embedding-001',
+      });
+      const result = await embeddingModel.embedContent({
+        content: { role: 'user', parts: [{ text }] },
+      });
+      return result.embedding.values;
+    } catch (error) {
+      console.error('Error generating embedding from Gemini:', error);
+      throw new Error('Failed to generate embedding from Gemini.');
+    }
+  }
   async generateEstimation(
     requirementText: string,
     chunks: { content: string }[],
@@ -131,30 +146,63 @@ export class GeminiService {
 
   async generateChatResponse(
     question: string,
-    chunks: { content: string }[],
-  ): Promise<string> {
+    chunks: { id: string, chunkIndex: number, content: string, metadata: any }[],
+  ): Promise<{ answer: string; citations: { chunkId: string }[] }> {
     console.log(
       'Generating chat response for:',
       question.substring(0, 100) + '...',
     );
     console.log(`Using ${chunks.length} document chunks for context.`);
 
-    const contextChunks = this._createContextString(chunks);
+    // Attach unique IDs to text to let the AI quote them
+    const contextChunks = chunks
+      .map((chunk) => `[CHUNK_ID: ${chunk.id}]\n${chunk.content}`)
+      .join('\n\n---\n\n');
+
     const prompt = `
       Answer the following question based on the provided context documents.
       If the answer is not in the context, say that you cannot answer.
       Provide the answer in ${this.language === 'es' ? 'Spanish' : 'English'}.
+      
+      You MUST return a JSON object with the following structure:
+      {
+        "answer": "Your detailed answer",
+        "citationIds": ["The CHUNK_ID(s) of the context blocks you used to answer the question"]
+      }
 
       Question:
       ${question}
 
-      Context:
+      Context (EACH CHUNK HAS A CHUNK_ID):
       ${contextChunks}
     `;
 
-    const response = await this.generateChatText(prompt);
-    console.log('AI chat response generated successfully.');
-    return response;
+    try {
+      const generationConfig = {
+        temperature: 0.2,
+        topP: 0.95,
+        topK: 64,
+        maxOutputTokens: 8192,
+        responseMimeType: 'application/json', // Requesting JSON
+      };
+      const result = await this.model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig,
+      });
+      const response = await result.response;
+      const jsonStr = response.text();
+      const parsed = JSON.parse(jsonStr);
+
+      console.log('AI chat response generated successfully.');
+
+      return {
+        answer: parsed.answer || 'No se pudo estructurar la respuesta.',
+        citations: (parsed.citationIds || []).map((id: string) => ({ chunkId: id }))
+      };
+    } catch (error) {
+      console.error('Error generating chat content from Gemini:', error);
+      return { answer: 'Ocurrió un error al procesar la respuesta con IA.', citations: [] };
+    }
   }
 
   private _createContextString(chunks: { content: string }[]): string {

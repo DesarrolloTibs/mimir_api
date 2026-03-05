@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  OneToOne,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Requirement } from '../../estimations/entities/requirement.entity';
@@ -44,6 +44,6 @@ export class Project {
   @Column({ type: 'uuid', name: 'created_by', nullable: true, insert: false, update: false })
   createdById: string;
 
-  @OneToOne(() => Requirement, (requirement) => requirement.project)
-  requirement: Requirement;
+  @OneToMany(() => Requirement, (requirement) => requirement.project)
+  requirements: Requirement[];
 }

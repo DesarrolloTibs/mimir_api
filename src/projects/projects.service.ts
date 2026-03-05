@@ -13,7 +13,7 @@ export class ProjectsService {
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
     private readonly documentsService: DocumentsService,
-  ) {}
+  ) { }
 
   async create(createProjectDto: CreateProjectDto): Promise<Project> {
     const { name, client, techStack } = createProjectDto;
@@ -30,7 +30,7 @@ export class ProjectsService {
 
   async findAll(): Promise<Project[]> {
     return this.projectRepository.find({
-      relations: ['requirement'],
+      relations: ['requirements'],
     });
   }
 

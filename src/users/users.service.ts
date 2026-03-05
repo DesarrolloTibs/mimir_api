@@ -15,16 +15,16 @@ export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async onModuleInit() {
-    const adminExists = await this.userRepository.findOne({ where: { email: 'ivonne.cabriales@tibs.com.mx' } });
+    const adminExists = await this.userRepository.findOne({ where: { email: 'hector.esparza@tibs.com.mx' } });
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash('Admin2026!', 10);
       await this.userRepository.save({
-        fullName: 'Ivonne Cabriales',
+        fullName: 'Hector Esparza',
         password: hashedPassword,
-        email: 'ivonne.cabriales@tibs.com.mx',
+        email: 'hector.esparza@tibs.com.mx',
         role: Role.Admin,
         isActive: true,
       });
@@ -58,11 +58,11 @@ export class UsersService implements OnModuleInit {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
     // Primero, asegúrate de que el usuario exista para evitar errores en la actualización.
-    const userToUpdate = await this.userRepository.findOne({ where: { id }});
+    const userToUpdate = await this.userRepository.findOne({ where: { id } });
     if (!userToUpdate) throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
 
     await this.userRepository.update(id, updateUserDto);
-    
+
     // Merge and return the updated user
     Object.assign(userToUpdate, updateUserDto);
     return userToUpdate;

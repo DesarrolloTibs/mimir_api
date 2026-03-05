@@ -66,6 +66,31 @@ export class DocumentsService {
     });
   }
 
+  async getRelevantProjectChunks(
+    projectId: string,
+    queryEmbedding: number[],
+    limit: number = 5,
+  ): Promise<DocumentChunk[]> {
+    const documents = await this.documentRepository.find({
+      where: { projectId, processingStatus: DocumentStatus.READY },
+    });
+    if (documents.length === 0) {
+      return [];
+    }
+
+    const documentIds = documents.map((doc) => doc.id);
+
+    // Using pgvector cosine distance `<=>` operator to find nearest neighbors
+    const chunks = await this.documentChunkRepository
+      .createQueryBuilder('chunk')
+      .where('chunk.document_id IN (:...documentIds)', { documentIds })
+      .orderBy(`chunk.embedding <=> '[${queryEmbedding.join(',')}]'`)
+      .limit(limit)
+      .getMany();
+
+    return chunks;
+  }
+
   async processDocument(documentId: string): Promise<void> {
     this.logger.log(`Starting processing for document ${documentId}`);
 

@@ -18,7 +18,7 @@ export class EstimationsService {
     @InjectRepository(DocumentChunk)
     private readonly documentChunkRepository: Repository<DocumentChunk>,
     private readonly geminiService: GeminiService,
-  ) {}
+  ) { }
 
   async generate(
     generateEstimationDto: GenerateEstimationDto,
@@ -37,14 +37,7 @@ export class EstimationsService {
 
     const documentContent = chunks.map((chunk) => chunk.content).join('\n\n');
 
-    // Check if a requirement already exists for this project and delete it
-    const existingRequirement = await this.requirementRepository.findOne({
-      where: { projectId },
-    });
-
-    if (existingRequirement) {
-      await this.requirementRepository.remove(existingRequirement);
-    }
+    // Removed automatic deletion of previous estimations to keep historical versions
 
     // 2. Save the requirement
     const newRequirement = this.requirementRepository.create({
@@ -90,10 +83,54 @@ export class EstimationsService {
     };
   }
 
-  async findAllByRequirementId(requirementId: string): Promise<EstimationItem[]> {
-    return this.estimationItemRepository.find({
+  async findAllByRequirementId(requirementId: string) {
+    const items = await this.estimationItemRepository.find({
       where: { requirementId },
       order: { createdAt: 'ASC' },
+    });
+
+    return items.map((item) => ({
+      id: item.id,
+      description: item.taskDescription,
+      layer: item.layer,
+      hours: Number(item.aiSuggestedHours),
+      reason: item.aiReasoning,
+    }));
+  }
+
+  async findAllByProjectId(projectId: string) {
+    const requirements = await this.requirementRepository.find({
+      where: { projectId },
+      order: { createdAt: 'DESC' },
+      relations: ['estimationItems'],
+    });
+
+    return requirements.map((req) => {
+      const confidenceScore =
+        req.estimationItems.length > 0
+          ? req.estimationItems[0].aiConfidenceScore
+          : 0;
+      const totalHours = req.estimationItems.reduce(
+        (acc, item) => acc + Number(item.aiSuggestedHours),
+        0,
+      );
+
+      return {
+        id: req.id,
+        projectId: req.projectId,
+        title: req.title,
+        status: req.status,
+        createdAt: req.createdAt,
+        totalHours,
+        confidenceScore,
+        tasks: req.estimationItems.map((item) => ({
+          id: item.id,
+          description: item.taskDescription,
+          layer: item.layer,
+          hours: Number(item.aiSuggestedHours),
+          reason: item.aiReasoning,
+        })),
+      };
     });
   }
 }

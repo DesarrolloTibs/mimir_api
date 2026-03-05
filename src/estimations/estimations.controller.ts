@@ -8,7 +8,7 @@ import { EstimationItem } from './entities/estimation-item.entity';
 @ApiTags('Estimations')
 @Controller('estimations')
 export class EstimationsController {
-  constructor(private readonly estimationsService: EstimationsService) {}
+  constructor(private readonly estimationsService: EstimationsService) { }
 
   @Post('generate')
   @ApiOperation({ summary: 'Generate a technical estimation for a requirement' })
@@ -30,9 +30,19 @@ export class EstimationsController {
   @ApiResponse({
     status: 200,
     description: 'List of estimation items associated with the requirement.',
-    type: [EstimationItem],
   })
   findAllByRequirementId(@Param('requirementId') requirementId: string) {
     return this.estimationsService.findAllByRequirementId(requirementId);
+  }
+
+  @Get('project/:projectId')
+  @ApiOperation({ summary: 'Get all historical estimations for a project' })
+  @ApiParam({ name: 'projectId', description: 'The ID of the project' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of historical requirements/estimations for the project.',
+  })
+  findAllByProjectId(@Param('projectId') projectId: string) {
+    return this.estimationsService.findAllByProjectId(projectId);
   }
 }

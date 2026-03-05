@@ -8,13 +8,15 @@ import { ChatMessage } from './entities/chat-message.entity';
 import { DocumentsModule } from 'src/documents/documents.module';
 import { CommonModule } from 'src/common/common.module';
 
+import { MessageCitation } from './entities/message-citation.entity';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChatSession, ChatMessage]),
+    TypeOrmModule.forFeature([ChatSession, ChatMessage, MessageCitation]),
     DocumentsModule,
     CommonModule,
   ],
   controllers: [ChatController],
   providers: [ChatService],
 })
-export class ChatModule {}
+export class ChatModule { }

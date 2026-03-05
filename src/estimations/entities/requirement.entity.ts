@@ -6,6 +6,7 @@ import {
   OneToOne,
   JoinColumn,
   OneToMany,
+  ManyToOne,
 } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
 import { EstimationItem } from './estimation-item.entity';
@@ -15,7 +16,7 @@ export class Requirement {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToOne(() => Project, (project) => project.requirement, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Project, (project: Project) => project.requirements, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'project_id' })
   project: Project;
 

@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { ChatSession } from './chat-session.entity';
+import { MessageCitation } from './message-citation.entity';
 
 export enum ChatMessageRole {
   USER = 'user',
@@ -36,4 +38,7 @@ export class ChatMessage {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
+
+  @OneToMany(() => MessageCitation, (citation) => citation.message)
+  citations: MessageCitation[];
 }
