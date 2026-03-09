@@ -16,13 +16,7 @@ export class ProjectsService {
   ) { }
 
   async create(createProjectDto: CreateProjectDto): Promise<Project> {
-    const { name, client, techStack } = createProjectDto;
-
-    const project = this.projectRepository.create({
-      name,
-      clientName: client,
-      techStackContext: techStack,
-    });
+    const project = this.projectRepository.create(createProjectDto);
 
     await this.projectRepository.save(project);
     return project;

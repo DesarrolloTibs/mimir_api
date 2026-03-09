@@ -1,5 +1,7 @@
-import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { Observable } from 'rxjs';
 import { ChatService } from './chat.service';
 import { PostMessageDto } from './dto/post-message.dto';
 
@@ -17,6 +19,31 @@ export class ChatController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   postMessage(@Body() postMessageDto: PostMessageDto) {
     return this.chatService.postMessage(postMessageDto);
+  }
+
+  @Post('message-stream')
+  @ApiOperation({ summary: 'Post a message to the chat and receive a streaming response' })
+  postMessageStream(@Body() postMessageDto: PostMessageDto, @Res() res: Response) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const subscription = this.chatService.postMessageStream(postMessageDto).subscribe({
+      next: (item) => {
+        res.write(`data: ${JSON.stringify(item.data)}\n\n`);
+      },
+      error: (error) => {
+        console.error('Stream error:', error);
+        res.end();
+      },
+      complete: () => {
+        res.end();
+      }
+    });
+
+    res.on('close', () => {
+      subscription.unsubscribe();
+    });
   }
 
   @Get('sessions/project/:projectId')

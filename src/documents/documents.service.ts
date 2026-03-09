@@ -8,6 +8,7 @@ import pdf from 'pdf-parse';
 import * as fs from 'fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
+import { recursiveCharacterSplit } from '../common/text-splitter';
 
 @Injectable()
 export class DocumentsService {
@@ -107,10 +108,9 @@ export class DocumentsService {
       const pdfData = await pdf(dataBuffer);
       const text = pdfData.text;
 
-      // Simple chunking strategy (by paragraphs)
-      const chunks = text
-        .split(/\n\s*\n/)
-        .filter((chunk) => chunk.trim() !== '');
+      // Generar chunks inteligentes con solapamiento
+      const chunks = recursiveCharacterSplit(text, 1000, 200);
+
       const embeddingModel = this.genAI.getGenerativeModel({
         model: 'gemini-embedding-001',
       });

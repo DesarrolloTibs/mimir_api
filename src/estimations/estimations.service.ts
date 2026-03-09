@@ -8,6 +8,8 @@ import { EstimationResponseDto } from './dto/estimation-response.dto';
 import { DocumentChunk } from '../documents/entities/document-chunk.entity';
 import { GeminiService } from '../common/gemini.service';
 
+import { DocumentsService } from '../documents/documents.service';
+
 @Injectable()
 export class EstimationsService {
   constructor(
@@ -18,6 +20,7 @@ export class EstimationsService {
     @InjectRepository(DocumentChunk)
     private readonly documentChunkRepository: Repository<DocumentChunk>,
     private readonly geminiService: GeminiService,
+    private readonly documentsService: DocumentsService,
   ) { }
 
   async generate(
@@ -25,16 +28,35 @@ export class EstimationsService {
   ): Promise<EstimationResponseDto> {
     const { projectId, documentId, requirementText } = generateEstimationDto;
 
-    // 1. Fetch document chunks
-    const chunks = await this.documentChunkRepository.find({
-      where: { document: { id: documentId } },
-      order: { chunkIndex: 'ASC' },
-    });
+    // 1. Fetch document chunks using semantic search
+    let chunks: DocumentChunk[] = [];
+    const searchTarget = requirementText || 'Requerimientos técnicos funcionales y no funcionales del proyecto';
+
+    // Generar embedding del requerimiento (o texto por defecto)
+    const queryEmbedding = await this.geminiService.generateEmbedding(searchTarget);
+
+    // Obtener solo los 15 chunks más relevantes
+    chunks = await this.documentsService.getRelevantProjectChunks(
+      projectId,
+      queryEmbedding,
+      15, // max chunks
+    );
+
+    if (!chunks || chunks.length === 0) {
+      // Fallback a buscar los primeros chunks del documento específico si no hay coincidencias vectoriales claras 
+      // (por ejemplo si el documento acaba de subir)
+      chunks = await this.documentChunkRepository.find({
+        where: { document: { id: documentId } },
+        order: { chunkIndex: 'ASC' },
+        take: 15,
+      });
+    }
 
     if (!chunks || chunks.length === 0) {
       throw new Error('No document chunks found for the given documentId.');
     }
 
+    // Para el título y originalText
     const documentContent = chunks.map((chunk) => chunk.content).join('\n\n');
 
     // Removed automatic deletion of previous estimations to keep historical versions
@@ -42,7 +64,7 @@ export class EstimationsService {
     // 2. Save the requirement
     const newRequirement = this.requirementRepository.create({
       projectId,
-      originalText: documentContent, // Store the full document content
+      originalText: documentContent, // Store the context we used for tracking
       title:
         (requirementText?.substring(0, 47) ??
           documentContent.substring(0, 47)) + '...', // Use user's text for title, fallback to content

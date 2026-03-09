@@ -1,5 +1,5 @@
-import { IsString, MinLength, MaxLength, IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, MinLength, MaxLength, IsNotEmpty, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProjectDto {
   @ApiProperty({
@@ -14,12 +14,13 @@ export class CreateProjectDto {
   @MaxLength(50)
   name: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'The client for the project',
     example: 'ACME Inc.',
   })
   @IsString()
-  client: string;
+  @IsOptional()
+  clientName?: string;
 
   @ApiProperty({
     description: 'The technology stack of the project',
@@ -27,5 +28,20 @@ export class CreateProjectDto {
   })
   @IsString()
   @IsNotEmpty()
-  techStack: string;
+  techStackContext: string;
+
+  @ApiPropertyOptional({
+    description: 'The description of the project',
+  })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'The status of the project',
+    example: 'Active',
+  })
+  @IsString()
+  @IsOptional()
+  status?: string;
 }

@@ -34,15 +34,19 @@ export class GeminiService {
     this.language = this.configService.get<string>('GEMINI_LANGUAGE', 'es');
   }
 
-  public async generateText(prompt: string): Promise<string> {
+  public async generateText(prompt: string, schema?: any): Promise<string> {
     try {
-      const generationConfig = {
+      const generationConfig: GenerationConfig = {
         temperature: 0.2,
         topP: 0.95,
         topK: 64,
         maxOutputTokens: 8192,
-        responseMimeType: 'application/json', // Expecting JSON for estimations
+        responseMimeType: schema ? 'application/json' : 'text/plain',
       };
+
+      if (schema) {
+        generationConfig.responseSchema = schema;
+      }
       const result = await this.model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig,
@@ -83,20 +87,6 @@ export class GeminiService {
     const contextChunks = this._createContextString(chunks);
     const prompt = `
       Based on the following requirement text and context documents, please generate a work estimation.
-      The output must be a JSON object with the following structure:
-      {
-        "summary": "A brief summary of the project",
-        "tasks": [
-          {
-            "description": "A description of the task",
-            "layer": "Frontend" | "Backend" | "DevOps" | "QA" | "Documentation",
-            "hours": "Estimated hours for the task",
-            "reason": "A brief justification for the estimation"
-          }
-        ],
-        "totalHours": "Total estimated hours for the project",
-        "confidenceScore": "A score from 0 to 100 representing the confidence in the estimation"
-      }
 
       Requirement:
       ${requirementText}
@@ -107,7 +97,52 @@ export class GeminiService {
       Provide the values for "summary", "description", and "reason" in ${this.language === 'es' ? 'Spanish' : 'English'}.
     `;
 
-    const response = await this.generateText(prompt);
+    const estimationSchema = {
+      type: "OBJECT" as any,
+      properties: {
+        summary: {
+          type: "STRING" as any,
+          description: "A brief summary of the project",
+        },
+        tasks: {
+          type: "ARRAY" as any,
+          items: {
+            type: "OBJECT" as any,
+            properties: {
+              description: {
+                type: "STRING" as any,
+                description: "A description of the task",
+              },
+              layer: {
+                type: "STRING" as any,
+                description: "The architectural layer",
+                enum: ['Frontend', 'Backend', 'DevOps', 'QA', 'Documentation'],
+              },
+              hours: {
+                type: "NUMBER" as any,
+                description: "Estimated hours for the task",
+              },
+              reason: {
+                type: "STRING" as any,
+                description: "A brief justification for the estimation",
+              },
+            },
+            required: ["description", "layer", "hours", "reason"],
+          },
+        },
+        totalHours: {
+          type: "NUMBER" as any,
+          description: "Total estimated hours for the project",
+        },
+        confidenceScore: {
+          type: "NUMBER" as any,
+          description: "A score from 0 to 100 representing the confidence in the estimation",
+        },
+      },
+      required: ["summary", "tasks", "totalHours", "confidenceScore"],
+    };
+
+    const response = await this.generateText(prompt, estimationSchema);
     try {
       const estimation: GeminiEstimation = JSON.parse(response);
       console.log('AI estimation generated successfully.');
@@ -178,7 +213,7 @@ export class GeminiService {
     `;
 
     try {
-      const generationConfig = {
+      const generationConfig: GenerationConfig = {
         temperature: 0.2,
         topP: 0.95,
         topK: 64,
@@ -202,6 +237,53 @@ export class GeminiService {
     } catch (error) {
       console.error('Error generating chat content from Gemini:', error);
       return { answer: 'Ocurrió un error al procesar la respuesta con IA.', citations: [] };
+    }
+  }
+
+  async generateChatResponseStream(
+    question: string,
+    chunks: { id: string, chunkIndex: number, content: string, metadata: any }[],
+  ) {
+    console.log(
+      'Generating streaming chat response for:',
+      question.substring(0, 100) + '...',
+    );
+    console.log(`Using ${chunks.length} document chunks for context.`);
+
+    const contextChunks = chunks
+      .map((chunk) => `[CHUNK_ID: ${chunk.id}]\n${chunk.content}`)
+      .join('\n\n---\n\n');
+
+    const prompt = `
+      Answer the following question based on the provided context documents.
+      If the answer is not in the context, say that you cannot answer.
+      Provide the answer in ${this.language === 'es' ? 'Spanish' : 'English'}.
+      
+      At the very end of your answer, you MUST list the CHUNK_IDs you used for context in this specific format on a new line:
+      CITATIONS: [CHUNK_ID_1, CHUNK_ID_2]
+
+      Question:
+      ${question}
+
+      Context (EACH CHUNK HAS A CHUNK_ID):
+      ${contextChunks}
+    `;
+
+    try {
+      const generationConfig: GenerationConfig = {
+        temperature: 0.2,
+        topP: 0.95,
+        topK: 64,
+        maxOutputTokens: 8192,
+      };
+
+      return await this.model.generateContentStream({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig,
+      });
+    } catch (error) {
+      console.error('Error generating streaming chat content from Gemini:', error);
+      throw error;
     }
   }
 
